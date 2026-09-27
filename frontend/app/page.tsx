@@ -2,6 +2,19 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
+import dynamic from "next/dynamic";
+
+const DoctorMap = dynamic(
+  () => import("./components/DoctorMap"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="doctorMapLoading">
+        Loading map...
+      </div>
+    ),
+  }
+);
 
 type Parameter = {
   value: number;
@@ -50,6 +63,34 @@ type AnalysisResponse = {
     pathway: PathwayStep[];
     safety_note: string;
   };
+};
+
+type Doctor = {
+  name: string;
+  specialization: string[];
+  clinic: string;
+  area: string;
+  city: string;
+  address: string;
+  consultation_fee: string;
+  timings: string;
+  phone: string;
+  latitude: number | null;
+  longitude: number | null;
+  source: string;
+  booking_url: string;
+};
+
+type DoctorRecommendationResponse = {
+  success: boolean;
+  location: string;
+  specialist: {
+    specialist_category: string;
+    reason: string;
+  };
+  doctor_count: number;
+  doctors: Doctor[];
+  note: string;
 };
 
 const API_URL = "http://127.0.0.1:8000";
@@ -278,6 +319,11 @@ export default function Home() {
   const [briefingOpen, setBriefingOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
 
+  // Doctor recommendation state.
+  const [doctorData, setDoctorData] = useState<DoctorRecommendationResponse | null>(null);
+  const [doctorLoading, setDoctorLoading] = useState(false);
+  const [doctorError, setDoctorError] = useState("");
+
   // Floating AI assistant state. This does not modify the report UI.
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantInput, setAssistantInput] = useState("");
@@ -312,6 +358,8 @@ export default function Home() {
     setFile(f);
     setError("");
     setResult(null);
+    setDoctorData(null);
+    setDoctorError("");
     setBriefingOpen(false);
   };
 
@@ -326,10 +374,24 @@ export default function Home() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const response = await fetch(`${API_URL}/upload-report`, { method: "POST", body: fd });
+      const response = await fetch(`${API_URL}/upload-report`, {
+  method: "POST",
+  body: fd,
+});
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.message || t.backend);
       setResult(data);
+      void loadDoctorRecommendations(data);
+
+      // Keep the latest real uploaded-report analysis available
+      // when navigating to the Clinical Analytics dashboard.
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(
+          "carebridge-latest-report",
+          JSON.stringify(data)
+        );
+      }
+
       setTimeout(() => document.getElementById("results")?.scrollIntoView({ behavior: "smooth" }), 100);
     } catch (e) {
       setError(e instanceof Error && e.message ? e.message : t.backend);
@@ -338,11 +400,74 @@ export default function Home() {
     }
   }
 
+  async function loadDoctorRecommendations(data: AnalysisResponse) {
+    setDoctorLoading(true);
+    setDoctorError("");
+    setDoctorData(null);
+
+    try {
+      const response = await fetch(`${API_URL}/doctor-recommendations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          medical_data: data.medical_data,
+          risk_analysis: data.risk_analysis,
+        }),
+      });
+
+      const doctorResult = await response.json();
+
+      if (!response.ok || !doctorResult.success) {
+        throw new Error(
+          doctorResult.message || "Doctor recommendations could not be loaded."
+        );
+      }
+
+      setDoctorData(doctorResult);
+
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(
+          "carebridge-doctor-recommendations",
+          JSON.stringify(doctorResult)
+        );
+      }
+    } catch (e) {
+      setDoctorError(
+        e instanceof Error
+          ? e.message
+          : "Doctor recommendations could not be loaded."
+      );
+    } finally {
+      setDoctorLoading(false);
+    }
+  }
+
+  function getDirectionsUrl(doctor: Doctor) {
+    // If coordinates are available, open an OSM route directly.
+    if (doctor.latitude !== null && doctor.longitude !== null) {
+      return (
+        `https://www.openstreetmap.org/directions?` +
+        `engine=fossgis_osrm_car&route=;${doctor.latitude},${doctor.longitude}`
+      );
+    }
+
+    // If the local directory does not yet contain coordinates, use a
+    // normal web map search instead of OSM's Nominatim search page.
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      `${doctor.clinic}, ${doctor.address}`
+    )}`;
+  }
+
   function reset() {
     setFile(null);
     setResult(null);
+    setDoctorData(null);
+    setDoctorError("");
     setError("");
     setBriefingOpen(false);
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("carebridge-doctor-recommendations");
+    }
     if (inputRef.current) inputRef.current.value = "";
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -423,6 +548,35 @@ export default function Home() {
         .findings{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}.finding{border:1px solid var(--border);border-top:4px solid #16803c;border-radius:19px;padding:18px;background:var(--surface);box-shadow:var(--shadow)}.finding.attention{border-top-color:#d08a00}.finding.high{border-top-color:#d13a32}.findingTop{display:flex;justify-content:space-between;gap:12px}.label{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase}.value{font-size:30px;font-weight:900;margin-top:4px}.value small{font-size:12px;color:var(--muted);margin-left:5px}.pill{padding:7px 9px;border-radius:999px;font-size:10px;font-weight:800;white-space:nowrap;height:max-content}.pill.normal{background:#e9f8ef;color:#166534}.pill.attention{background:#fff4d5;color:#925d00}.pill.high{background:#ffe8e6;color:#a12620}.dark .pill.normal{background:#123424;color:#8ee5aa}.dark .pill.attention{background:#382d13;color:#ffd889}.dark .pill.high{background:#3c1b1a;color:#ffaaa3}.range{display:flex;justify-content:space-between;padding:10px 12px;border-radius:10px;background:var(--soft);margin:16px 0;font-size:12px}.range span{color:var(--muted)}.explanation{color:var(--muted);line-height:1.65}.discussion{padding:12px;border-radius:12px;background:var(--soft)}.discussion strong{font-size:12px;color:var(--primary)}.discussion p{font-size:12px;color:var(--muted);margin:5px 0 0;line-height:1.55}
         .pathway{border:1px solid var(--border);border-radius:21px;padding:22px;background:var(--surface);box-shadow:var(--shadow)}.pathStep{display:grid;grid-template-columns:58px 1fr;gap:15px;position:relative;min-height:120px}.pathStep:last-child{min-height:70px}.node{width:52px;height:52px;border-radius:50%;border:3px solid var(--border);background:var(--surface2);display:grid;place-items:center;color:var(--muted);font-weight:900;z-index:2}.node.complete{border-color:#16803c;color:#16803c}.node.current{border-color:var(--primary);color:var(--primary);box-shadow:0 0 0 7px rgba(23,105,255,.08)}.line{position:absolute;left:25px;top:52px;bottom:0;width:2px;background:linear-gradient(#5b96ff,#dce7f5)}.pathContent{padding:3px 0 22px}.pathContent small{color:var(--primary);font-weight:900;letter-spacing:.1em}.pathContent h4{margin:4px 0 5px;font-size:18px}.pathContent p{margin:0;color:var(--muted);line-height:1.6}
         .next{margin-top:15px;padding:22px;border-radius:21px;background:linear-gradient(135deg,#0b1f3a,#1455b8);color:#fff;display:grid;grid-template-columns:65px 1fr;gap:15px;box-shadow:var(--shadow)}.nextIcon{width:55px;height:55px;border-radius:15px;background:rgba(255,255,255,.13);display:grid;place-items:center;font-size:25px}.next h3{margin:0 0 5px}.next p{margin:0;color:#d8e8ff}.questions{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}.question{padding:14px;border:1px solid var(--border);border-radius:13px;background:var(--surface);font-size:13px}.question b{color:var(--primary);margin-right:7px}.safety{margin-top:15px;padding:14px;border:1px solid var(--border);border-radius:14px;color:var(--muted);font-size:12px;line-height:1.6;display:flex;gap:9px}.footer{border-top:1px solid var(--border);margin-top:55px;padding:28px 0 38px;display:flex;justify-content:space-between;color:var(--muted);font-size:12px}.footer strong{color:var(--text);letter-spacing:.1em;margin-right:9px}
+        /* ================= DOCTOR FINDER ================= */
+        .doctorSection{margin-top:18px}
+        .doctorIntro{border:1px solid var(--border);border-radius:20px;padding:18px;background:linear-gradient(90deg,var(--soft),transparent);margin-bottom:15px}
+        .doctorIntro strong{display:block;font-size:16px;margin-bottom:5px}
+        .doctorIntro p{margin:0;color:var(--muted);font-size:12px;line-height:1.6}
+        .doctorGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
+        .doctorCard{border:1px solid var(--border);border-radius:20px;padding:19px;background:var(--surface);box-shadow:var(--shadow)}
+        .doctorTop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+        .doctorAvatar{width:48px;height:48px;border-radius:15px;background:var(--soft);display:grid;place-items:center;color:var(--primary);font-size:22px;flex:0 0 auto}
+        .doctorName{font-size:17px;font-weight:900;margin:0 0 4px}
+        .doctorSpecialization{font-size:11px;color:var(--primary);font-weight:800;line-height:1.5}
+        .doctorMeta{display:grid;gap:9px;margin:16px 0}
+        .doctorMetaRow{display:flex;gap:9px;align-items:flex-start;font-size:12px}
+        .doctorMetaRow span:first-child{width:20px;flex:0 0 20px}
+        .doctorMetaRow div{color:var(--muted);line-height:1.5}
+        .doctorMetaRow strong{color:var(--text)}
+        .doctorActions{display:flex;flex-wrap:wrap;gap:8px}
+        .doctorButton{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 12px;border-radius:11px;border:1px solid var(--border);background:var(--surface2);color:var(--text);text-decoration:none;font-size:11px;font-weight:800;cursor:pointer}
+        .doctorButton.primaryDoctor{border:0;color:#fff;background:linear-gradient(90deg,#1769ff,#00a8d6)}
+        .doctorButton:hover{transform:translateY(-1px);border-color:var(--primary)}
+        .doctorMapWrap{margin-top:15px;border:1px solid var(--border);border-radius:21px;overflow:hidden;background:var(--surface)}
+        .doctorMapHead{padding:15px 17px;border-bottom:1px solid var(--border)}
+        .doctorMapHead strong{display:block}
+        .doctorMapHead span{font-size:11px;color:var(--muted)}
+        .doctorMapLoading{height:350px;display:grid;place-items:center;background:var(--surface2);color:var(--muted);font-size:12px}
+        .doctorEmpty{padding:20px;border:1px solid var(--border);border-radius:17px;background:var(--surface2);color:var(--muted);font-size:12px;line-height:1.6}
+        .doctorError{margin-top:12px;padding:13px;border-radius:12px;color:#b42318;background:#fff0ee;border:1px solid #ffc8c2;font-size:12px}
+        .dark .doctorError{color:#ffb7af;background:#351817;border-color:#61302b}
+        .doctorNote{margin-top:12px;color:var(--muted);font-size:10px;line-height:1.5}
         /* ================= AI ASSISTANT ================= */
         .aiLauncher{position:fixed;right:28px;bottom:28px;width:64px;height:64px;border:0;border-radius:50%;background:linear-gradient(135deg,#1769ff,#00a8d6);color:#fff;font-size:29px;display:grid;place-items:center;cursor:pointer;z-index:100;box-shadow:0 16px 40px rgba(23,105,255,.35);transition:transform .2s,box-shadow .2s}.aiLauncher:hover{transform:translateY(-3px) scale(1.03);box-shadow:0 20px 48px rgba(23,105,255,.45)}
         .aiPanel{position:fixed;right:28px;bottom:104px;width:min(390px,calc(100vw - 32px));height:min(590px,calc(100vh - 135px));display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border);border-radius:24px;background:var(--surface);box-shadow:0 24px 70px rgba(0,0,0,.28);z-index:99}
@@ -430,7 +584,7 @@ export default function Home() {
         .aiMessages{flex:1;overflow-y:auto;padding:15px;background:var(--surface2);display:flex;flex-direction:column;gap:10px}.aiMessage{max-width:88%;padding:11px 13px;border-radius:15px;font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-word}.aiMessage.user{align-self:flex-end;background:linear-gradient(135deg,#1769ff,#147fdd);color:#fff;border-bottom-right-radius:5px}.aiMessage.assistant{align-self:flex-start;background:var(--surface);color:var(--text);border:1px solid var(--border);border-bottom-left-radius:5px}.aiTyping{display:flex;align-items:center;gap:5px;padding:10px 13px;width:max-content;border:1px solid var(--border);border-radius:15px;background:var(--surface)}.aiTyping span{width:6px;height:6px;border-radius:50%;background:var(--primary);animation:aiBounce 1s infinite ease-in-out}.aiTyping span:nth-child(2){animation-delay:.15s}.aiTyping span:nth-child(3){animation-delay:.3s}@keyframes aiBounce{0%,80%,100%{transform:translateY(0);opacity:.45}40%{transform:translateY(-4px);opacity:1}}
         .aiSuggestions{padding:10px 12px 0;background:var(--surface);display:flex;gap:7px;overflow-x:auto}.aiSuggestion{flex:0 0 auto;border:1px solid var(--border);border-radius:999px;background:var(--surface2);color:var(--text);padding:7px 10px;font-size:10px;cursor:pointer}.aiSuggestion:hover{border-color:var(--primary);color:var(--primary)}
         .aiComposer{padding:12px;background:var(--surface);border-top:1px solid var(--border);display:flex;gap:8px}.aiInput{flex:1;min-width:0;height:42px;border:1px solid var(--border);border-radius:12px;background:var(--surface2);color:var(--text);padding:0 12px;outline:none;font-size:12px}.aiInput:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(23,105,255,.1)}.aiSend{width:44px;height:42px;border:0;border-radius:12px;background:linear-gradient(135deg,#1769ff,#00a8d6);color:#fff;cursor:pointer;font-size:17px}.aiSend:disabled{opacity:.5;cursor:not-allowed}.aiDisclaimer{padding:7px 12px 11px;background:var(--surface);color:var(--muted);font-size:9px;line-height:1.4}
-        @media(max-width:900px){.hero{grid-template-columns:1fr}.visual{height:280px}.stats{grid-template-columns:1fr 1fr}.status{grid-column:span 2}.findings{grid-template-columns:1fr}}
+        @media(max-width:900px){.hero{grid-template-columns:1fr}.visual{height:280px}.stats{grid-template-columns:1fr 1fr}.status{grid-column:span 2}.findings{grid-template-columns:1fr}.doctorGrid{grid-template-columns:1fr}}
         @media(max-width:620px){.aiLauncher{right:18px;bottom:18px}.aiPanel{right:16px;bottom:94px;width:calc(100vw - 32px);height:min(600px,calc(100vh - 115px))}.cb-nav,.cb-main{width:calc(100% - 22px)}.brand p{display:none}.lang{max-width:105px}.hero{padding:40px 0}.hero h2{font-size:43px}.hero>div>p{font-size:15px}.footer{flex-direction:column;gap:10px}.questions{grid-template-columns:1fr}}
       `}</style>
 
@@ -441,6 +595,13 @@ export default function Home() {
             <div><h1>CAREBRIDGE</h1><p>Clinical Pathway Intelligence</p></div>
           </div>
           <div className="actions">
+            <a
+              href="/analytics"
+              className="analyticsNav"
+              title="Open Clinical Pathway Analytics"
+            >
+              Clinical Analytics →
+            </a>
             <select className="lang" aria-label={t.language} value={language} onChange={e => setLanguage(e.target.value)}>
               {languages.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
             </select>
@@ -547,6 +708,159 @@ export default function Home() {
                   </div>;
                 })}
               </div>
+            </section>
+
+            <section className="section doctorSection">
+              <div className="section-head">
+                <div>
+                  <span className="kicker">05 / FIND CARE</span>
+                  <h3>Doctor recommendations</h3>
+                  <p>Potentially relevant Bangalore specialists based on the findings detected in your report.</p>
+                </div>
+              </div>
+
+              {doctorLoading && (
+                <div className="doctorEmpty">
+                  <strong>Finding relevant doctors...</strong>
+                  <br />
+                  CAREBRIDGE is matching the detected findings with the local Bangalore doctor directory.
+                </div>
+              )}
+
+              {!doctorLoading && doctorError && (
+                <div className="doctorError">
+                  ⚠ {doctorError}
+                </div>
+              )}
+
+              {!doctorLoading && doctorData && (
+                <>
+                  <div className="doctorIntro">
+                    <strong>
+                      Suggested specialist: {doctorData.specialist.specialist_category}
+                    </strong>
+                    <p>{doctorData.specialist.reason}</p>
+                  </div>
+
+                  {doctorData.doctors.length > 0 ? (
+                    <div className="doctorGrid">
+                      {doctorData.doctors.map((doctor, index) => (
+                        <article className="doctorCard" key={`${doctor.name}-${doctor.clinic}-${index}`}>
+                          <div className="doctorTop">
+                            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                              <div className="doctorAvatar">♙</div>
+                              <div>
+                                <h4 className="doctorName">{doctor.name}</h4>
+                                <div className="doctorSpecialization">
+                                  {doctor.specialization.join(" · ")}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="doctorMeta">
+                            <div className="doctorMetaRow">
+                              <span>🏥</span>
+                              <div>
+                                <strong>{doctor.clinic}</strong>
+                                <br />
+                                {doctor.area}, {doctor.city}
+                              </div>
+                            </div>
+
+                            <div className="doctorMetaRow">
+                              <span>💰</span>
+                              <div>
+                                <strong>{doctor.consultation_fee}</strong> consultation fee
+                              </div>
+                            </div>
+
+                            <div className="doctorMetaRow">
+                              <span>🕒</span>
+                              <div>{doctor.timings}</div>
+                            </div>
+
+                            <div className="doctorMetaRow">
+                              <span>📍</span>
+                              <div>{doctor.address}</div>
+                            </div>
+
+                            {doctor.phone && (
+                              <div className="doctorMetaRow">
+                                <span>☎</span>
+                                <div>{doctor.phone}</div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="doctorActions">
+                            <a
+                              className="doctorButton primaryDoctor"
+                              href={doctor.booking_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              Book / Check availability
+                            </a>
+
+                            <a
+                              className="doctorButton"
+                              href={getDirectionsUrl(doctor)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              📍 Directions
+                            </a>
+
+                            <a
+                              className="doctorButton"
+                              href={doctor.source}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              View source
+                            </a>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="doctorEmpty">
+                      No matching doctor records were found in the current local directory.
+                    </div>
+                  )}
+
+                  {doctorData.doctors.length > 0 && (
+                    <div className="doctorMapWrap">
+                      <div className="doctorMapHead">
+                        <strong>Clinic location</strong>
+                        <span>
+                          OpenStreetMap-powered map · the map can locate clinics
+                          even when the directory has no stored coordinates.
+                        </span>
+                      </div>
+
+                      {(() => {
+                        const doctor = doctorData.doctors[0];
+
+                        return (
+                          <DoctorMap
+                            latitude={doctor.latitude}
+                            longitude={doctor.longitude}
+                            doctorName={doctor.name}
+                            clinicName={doctor.clinic}
+                            address={doctor.address}
+                          />
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  <div className="doctorNote">
+                    {doctorData.note}
+                  </div>
+                </>
+              )}
             </section>
 
             <section className="section">

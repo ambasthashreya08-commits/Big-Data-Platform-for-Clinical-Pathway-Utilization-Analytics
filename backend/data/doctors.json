@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Dr. N. Praveen Kumar",
+    "specialization": [
+      "Cardiologist",
+      "Diabetologist",
+      "General Physician"
+    ],
+    "clinic": "Samiksha Heart & Diabetic Care",
+    "area": "Yelahanka New Town",
+    "city": "Bangalore",
+    "address": "1226, 8th B Cross Road, Yelahanka New Town, Bengaluru, Karnataka 560064",
+    "consultation_fee": "₹500",
+    "timings": "Monday-Saturday: 10:00 AM-2:00 PM, 4:00 PM-8:00 PM; Sunday: 10:00 AM-1:30 PM",
+    "phone": "+91 74118 82511",
+    "latitude": null,
+    "longitude": null,
+    "source": "https://heartanddiabeticcare.com/",
+    "booking_url": "https://heartanddiabeticcare.com/contact"
+  },
+  {
+    "name": "Dr. Kunal Gupta",
+    "specialization": [
+      "Endocrinologist"
+    ],
+    "clinic": "Apollo Clinic",
+    "area": "Indiranagar",
+    "city": "Bangalore",
+    "address": "Apollo Clinic, Indiranagar, Bengaluru, Karnataka",
+    "consultation_fee": "₹500-₹1200",
+    "timings": "Clinic hours should be verified before appointment",
+    "phone": "",
+    "latitude": null,
+    "longitude": null,
+    "source": "https://www.practo.com/bangalore/clinics/general-endocrinology-clinics",
+    "booking_url": "https://www.practo.com/bangalore/endocrinologist"
+  },
+  {
+    "name": "Dr. Vishal Lahoti",
+    "specialization": [
+      "Endocrinologist",
+      "Diabetologist"
+    ],
+    "clinic": "Apollo Clinic",
+    "area": "HSR Layout",
+    "city": "Bangalore",
+    "address": "Apollo Clinic, HSR Layout, Bengaluru, Karnataka",
+    "consultation_fee": "₹600-₹2000",
+    "timings": "Clinic hours should be verified before appointment",
+    "phone": "",
+    "latitude": null,
+    "longitude": null,
+    "source": "https://www.practo.com/bangalore/clinics/general-endocrinology-clinics",
+    "booking_url": "https://www.practo.com/bangalore/endocrinologist"
+  },
+  {
+    "name": "Dr. Hema Venkataraman",
+    "specialization": [
+      "Endocrinologist"
+    ],
+    "clinic": "Aster Whitefield Hospital",
+    "area": "Whitefield",
+    "city": "Bangalore",
+    "address": "Aster Whitefield Hospital, Whitefield, Bengaluru, Karnataka",
+    "consultation_fee": "₹1100",
+    "timings": "Appointment timing should be verified before booking",
+    "phone": "",
+    "latitude": null,
+    "longitude": null,
+    "source": "https://www.practo.com/bangalore/endocrinologist",
+    "booking_url": "https://www.practo.com/bangalore/endocrinologist"
+  },
+  {
+    "name": "Dr. Sreekanth B. Shetty",
+    "specialization": [
+      "Cardiologist"
+    ],
+    "clinic": "Svasti Heart and Dental Care",
+    "area": "HSR Layout",
+    "city": "Bangalore",
+    "address": "Svasti Heart and Dental Care, HSR Layout, Bengaluru, Karnataka",
+    "consultation_fee": "₹300-₹1200",
+    "timings": "Clinic hours should be verified before appointment",
+    "phone": "",
+    "latitude": null,
+    "longitude": null,
+    "source": "https://www.practo.com/bangalore/clinics/cardiology-clinics",
+    "booking_url": "https://www.practo.com/bangalore/clinics/cardiology-clinics"
+  }
+]
