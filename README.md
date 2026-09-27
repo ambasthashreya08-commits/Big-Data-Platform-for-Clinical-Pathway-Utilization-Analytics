@@ -4,6 +4,50 @@ CAREBRIDGE is a clinical pathway intelligence platform combining
 patient-level medical report analysis with population-level
 clinical event-log analytics.
 
+🗺️ Platform at a Glance
+
+flowchart LR
+    A[📄 Medical PDF] --> B[🔍 Parameter Extraction]
+    B --> C[⚠️ Risk Analysis]
+    C --> D[🩺 Patient-Specific Pathway]
+    D --> E[🤖 AI Assistant]
+
+    F[🏥 Clinical Event Log] --> G[🧹 Event Preprocessing]
+    G --> H[🧭 Pathway Discovery]
+    H --> I[📊 Utilization Analytics]
+    I --> J[🔎 Deviation E / S / T / R]
+    J --> K[🚦 Bottleneck Detection]
+    K --> L[📈 Clinical Analytics Dashboard]
+
+    D -. patient view .-> M[CAREBRIDGE]
+    L -. population view .-> M
+
+Two analytical perspectives
+
+👤 Patient Perspective
+
+🏥 Population Perspective
+
+Medical PDF upload
+
+XES event log
+
+Parameter extraction
+
+Pathway discovery
+
+Rule-based risk indicators
+
+Utilization & duration
+
+Patient-specific pathway
+
+E / S / T / R deviations
+
+AI-assisted explanation
+
+Bottleneck detection
+
 Features
 
 Patient-Level Workflow
@@ -47,6 +91,18 @@ Bottleneck detection using transition frequency and median delay
 FastAPI /analytics endpoint
 
 Next.js Clinical Analytics dashboard
+
+📊 Implementation Snapshot
+
+flowchart LR
+    A["15,214<br/>Clinical Events"] --> B["1,050<br/>Cases"]
+    B --> C["846<br/>Pathway Variants"]
+    C --> D["79<br/>Candidate Transitions"]
+    D --> E["8<br/>Detected Bottlenecks"]
+
+Most frequent pathway utilization: 3.33%
+Median duration: 128.24 h · Mean duration: 683.26 h
+Largest identified bottleneck: Release A → Return ER · Median delay: 1,134.4 h (~47 days)
 
 Current Implementation Results
 
@@ -111,6 +167,22 @@ clinical-pathway-platform/
 └── datasets/
     └── event_logs/
         └── Sepsis Cases - Event Log.xes.gz
+
+⚡ Run CAREBRIDGE
+
+┌──────────────────────────────┐
+│ Terminal 1                   │
+│ FastAPI + Uvicorn            │
+│ 127.0.0.1:8000               │
+└──────────────┬───────────────┘
+               │
+               │ API
+               ▼
+┌──────────────────────────────┐
+│ Terminal 2                   │
+│ Next.js                      │
+│ localhost:3000               │
+└──────────────────────────────┘
 
 Setup and Running the Project
 
@@ -221,6 +293,34 @@ The endpoint should return a successful response.
 
 If the frontend shows “Failed to fetch” while uploading a report, make sure the FastAPI server is running in Terminal 1 and verify that the health endpoint is accessible.
 
+🔬 How the Analytics Works
+
+flowchart TD
+    A["📦 Sepsis XES Event Log"] --> B["Case grouping"]
+    B --> C["Timestamp ordering"]
+    C --> D["Pathway sequences"]
+
+    D --> E["🧭 Pathway Discovery"]
+    D --> F["📊 Utilization"]
+    D --> G["🔎 Deviation Analysis"]
+    D --> H["🚦 Bottleneck Detection"]
+
+    G --> G1["E • Event"]
+    G --> G2["S • Sequence"]
+    G --> G3["T • Temporal"]
+    G --> G4["R • Repetition"]
+
+    E --> I["CSV Results"]
+    F --> I
+    G1 --> I
+    G2 --> I
+    G3 --> I
+    G4 --> I
+    H --> I
+
+    I --> J["⚡ FastAPI /analytics"]
+    J --> K["🖥️ Next.js Clinical Analytics"]
+
 Analytics Pipeline
 
 XES Event Log
@@ -257,6 +357,33 @@ threshold.
 
 Bottlenecks are operational analytics signals, not clinical
 diagnoses or patient outcome predictions.
+
+🖼️ Application Screens
+
+Add your actual screenshots to docs/screenshots/ and keep these filenames for a polished GitHub project page:
+
+docs/
+└── screenshots/
+    ├── home.png
+    ├── report-analysis.png
+    └── clinical-analytics.png
+
+Then display them in this section:
+
+<table>
+  <tr>
+    <td align="center"><strong>🏠 Patient Upload</strong></td>
+    <td align="center"><strong>📄 Report Analysis</strong></td>
+    <td align="center"><strong>📊 Clinical Analytics</strong></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/home.png" alt="CAREBRIDGE home page" width="300"></td>
+    <td><img src="docs/screenshots/report-analysis.png" alt="CAREBRIDGE report analysis" width="300"></td>
+    <td><img src="docs/screenshots/clinical-analytics.png" alt="CAREBRIDGE clinical analytics" width="300"></td>
+  </tr>
+</table>
+
+If these screenshots are not added yet, the rest of the README remains fully usable without them.
 
 API Endpoints
 
